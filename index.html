@@ -33,7 +33,7 @@
     <!-- HEADER -->
     <div class="text-center mb-10">
         <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight">
-            🌧️ Smart Rice Field Advisor
+            🌧️ Pemandu Varietas Padi
         </h1>
         <p class="text-slate-400 text-sm mt-2">
             Analisis cepat kesesuaian varietas padi berbasis kondisi lahan
@@ -44,12 +44,10 @@
     <div class="glass-card p-6 rounded-2xl mb-6 border border-white/10">
 
         <p class="text-xs text-green-400 font-bold uppercase mb-4 tracking-widest">
-            📥 Input Kondisi Lahan
+            📥 Input Kondisi Lingkungan
         </p>
 
-        <input id="input-umur" type="number"
-            placeholder="Umur panen (hari)"
-            class="w-full p-3 mb-3 bg-slate-900 rounded-xl border border-white/5 focus:border-green-500 outline-none">
+      
 
         <select id="input-hujan"
             class="w-full p-3 mb-4 bg-slate-900 rounded-xl border border-white/5 text-slate-300 focus:border-green-500 outline-none">
@@ -60,10 +58,19 @@
             <option value="tinggi">Tinggi</option>
             <option value="sangat tinggi">Sangat Tinggi</option>
         </select>
-
+<select id="input-lahan"
+    class="w-full p-3 mb-4 bg-slate-900 rounded-xl border border-white/5 text-slate-300 focus:border-green-500 outline-none">
+    <option value="">-- Tipe Lahan --</option>
+    <option value="irigasi">Lahan Irigasi</option>
+    <option value="tadah hujan">Lahan Tadah Hujan</option>
+    <option value="rawa">Lahan Rawa / Lebak</option>
+</select>
+  <input id="input-umur" type="number"
+            placeholder="-- Target Umur Panen -- (hari)"
+            class="w-full p-3 mb-3 bg-slate-900 rounded-xl border border-white/5 focus:border-green-500 outline-none">
         <button onclick="analisisLahan()"
             class="w-full bg-gradient-to-r from-green-600 to-emerald-500 p-3 rounded-xl font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-green-900/40">
-            🚀 Analisis Sekarang
+            🚀 Cari Tahu Varietas Padi yang Tepat Sekarang
         </button>
 
     </div>
@@ -84,88 +91,97 @@
 </div>
 
 <script>
-const gasUrl = "https://script.google.com/macros/s/AKfycbw3OS5lRLrJ1dRgfqMoT7B-rkOpvYCtYdprPk3M90LzHsZPdC2LSy-tlaoO6tlqTb_l/exec";
-
-// =======================
-// 📈 KLASIFIKASI UMUR
-// =======================
-function klasifikasiUmur(hari) {
-    if (hari <= 90) return "ultra genjah";
-    if (hari <= 105) return "sangat genjah";
-    if (hari <= 120) return "genjah";
-    if (hari <= 135) return "sedang";
-    return "panjang";
-}
-
-// =======================
-// 🌧️ ANALISIS LAHAN + AI
-// =======================
-async function analisisLahan() {
-
-    document.getElementById("hasil-analisis").classList.remove("hidden");
-    document.getElementById("isi-analisis").innerHTML = "🔄 Menganalisis kondisi lahan...";
-
-    const umur = parseInt(document.getElementById("input-umur").value);
-    const hujan = document.getElementById("input-hujan").value;
-
-    if (!umur || !hujan) {
-        alert("Isi semua data!");
-        return;
+    const gasUrl = "https://script.google.com/macros/s/AKfycbyvjpL85ViqUv_bSviNRK3LhFbJGsxzPDBTxvKMG7i3slqtoGEBekC63RA43K76wODKGA/exec";
+    
+    function klasifikasiUmur(hari) {
+        if (hari <= 80) return "ultra genjah";
+        if (hari <= 95) return "sangat genjah";
+        if (hari <= 105) return "genjah";
+        if (hari <= 120) return "sedang";
+        return "panjang";
     }
 
-    const kategori = klasifikasiUmur(umur);
+    async function analisisLahan() {
+        const inputUmur = document.getElementById("input-umur").value;
+        const inputHujan = document.getElementById("input-hujan").value;
+        const inputLahan = document.getElementById("input-lahan").value;
+        const isiAnalisis = document.getElementById("isi-analisis");
+        const hasilAnalisis = document.getElementById("hasil-analisis");
 
-    const prompt = `
-Anda adalah PPL Indonesia.
-
-Data:
-- Umur: ${umur} hari (${kategori})
-- Curah hujan: ${hujan}
-
-WAJIB jawab JSON:
-{
-"rekomendasi": "sebutkan 2-3 varietas",
-"alasan": "penjelasan singkat",
-"tips": "tips praktis"
-}
-`;
-
-    try {
-        const res = await fetch(gasUrl, {
-            method: "POST",
-            body: JSON.stringify({ prompt })
-        });
-
-        const raw = await res.text();
-
-        const start = raw.indexOf("{");
-        const end = raw.lastIndexOf("}");
-
-        let output = "⚠️ Format AI tidak valid";
-
-        if (start !== -1 && end !== -1) {
-            const json = JSON.parse(raw.substring(start, end + 1));
-
-            output = `
-<div class="bg-green-500/5 p-3 rounded-xl border border-green-500/20">
-<b>🌾 Rekomendasi:</b><br>${json.rekomendasi}
-</div>
-
-<div class="bg-blue-500/5 p-3 rounded-xl border border-blue-500/20">
-<b>📊 Analisis:</b><br>${json.alasan}
-</div>
-
-<div class="bg-amber-500/5 p-3 rounded-xl border border-amber-500/20">
-<b>💡 Tips:</b><br>${json.tips}
-</div>
-`;
+        if (!inputUmur || !inputHujan || !inputLahan) {
+            alert("⚠️ Mohon lengkapi semua data lahan!");
+            return;
         }
 
-        document.getElementById("isi-analisis").innerHTML = output;
+        // 1. Tampilkan Animasi Loading yang lebih 'High-Tech'
+        hasilAnalisis.classList.remove("hidden");
+        isiAnalisis.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-10">
+                <div class="relative w-16 h-16 mb-4">
+                    <div class="absolute inset-0 border-4 border-green-500/20 rounded-full"></div>
+                    <div class="absolute inset-0 border-4 border-t-green-500 rounded-full animate-spin"></div>
+                </div>
+                <p class="text-green-400 animate-pulse font-medium tracking-wide">
+                    🤖 AI sedang menganalisis kecocokan varietas...
+                </p>
+            </div>
+        `;
 
-    } catch (err) {
-        console.error(err);
-        document.getElementById("isi-analisis").innerHTML = "❌ Gagal analisis AI";
+        const kategori = klasifikasiUmur(parseInt(inputUmur));
+        const prompt = `Anda adalah PPL Indonesia ahli agronomi. Berikan rekomendasi varietas padi berdasarkan data ini:
+Data: Umur target ${inputUmur} hari (${kategori}), Curah hujan: ${inputHujan}, Tipe Lahan: ${inputLahan}.
+
+Aturan Ahli:
+1. Jika lahan "Rawa", utamakan varietas tahan rendaman atau khusus rawa seperti Inpara (Inpara 1-9).
+2. Jika lahan "Tadah Hujan", utamakan varietas tahan kekeringan seperti Inpari 38, 39, 40 atau Situ Bagendit.
+3. Jika lahan "Irigasi" dan "Ultra Genjah", prioritaskan M70D atau Inpari 13 untuk percepatan tanam.
+
+WAJIB JAWAB DALAM JSON MURNI:
+{
+  "rekomendasi": "Nama varietas spesifik",
+  "alasan": "Penjelasan ilmiah singkat",
+  "tips": "Tips manajemen air/pupuk"
+}`;
+
+        try {
+            const res = await fetch(`${gasUrl}?prompt=${encodeURIComponent(prompt)}`, {
+                method: "POST"
+            });
+
+            const rawResponse = await res.json();
+            let aiText = rawResponse.candidates[0].content.parts[0].text;
+            
+            // 2. Pembersihan JSON yang lebih kuat
+            aiText = aiText.replace(/```json|```/g, "").trim();
+            const json = JSON.parse(aiText);
+
+            // 3. Tampilkan Hasil dengan transisi yang bersih
+            isiAnalisis.innerHTML = `
+                <div class="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-4">
+                    <div class="bg-green-500/10 p-4 rounded-xl border border-green-500/20">
+                        <span class="text-[10px] text-green-400 font-bold uppercase tracking-widest block mb-1">Rekomendasi</span>
+                        <b class="text-white text-lg">${json.rekomendasi}</b>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 gap-3">
+                        <div class="bg-blue-500/10 p-4 rounded-xl border border-blue-500/20">
+                            <b class="text-blue-400 block mb-1">📊 Analisis:</b>
+                            <p class="text-slate-300 leading-relaxed">${json.alasan}</p>
+                        </div>
+                        
+                        <div class="bg-amber-500/10 p-4 rounded-xl border border-amber-500/20">
+                            <b class="text-amber-400 block mb-1">💡 Tips:</b>
+                            <p class="text-slate-300 leading-relaxed">${json.tips}</p>
+                        </div>
+                    </div>
+                </div>`;
+
+        } catch (err) {
+            console.error(err);
+            isiAnalisis.innerHTML = `
+                <div class="text-center p-6 border border-red-500/20 rounded-2xl">
+                    <p class="text-red-400 italic">❌ Gagal terhubung ke AI. Pastikan API Key di GAS sudah aktif atau coba beberapa saat lagi.</p>
+                </div>`;
+        }
     }
-}
 </script>
