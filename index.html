@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Katalog Varietas Padi - BPP Bola</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { 
+            background-color: #050810; 
+            background-image: radial-gradient(circle at top right, #0d1b3e, transparent);
+        }
+        .glass-card { 
+            background: rgba(15, 23, 42, 0.8); 
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        @keyframes loading-slide {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(250%); }
+        }
+        .animate-loading {
+            animation: loading-slide 1.5s infinite linear;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 text-slate-200">
+
+<div class="max-w-xl mx-auto">
+
+    <!-- HEADER -->
+    <div class="text-center mb-10">
+        <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight">
+            🌧️ Smart Rice Field Advisor
+        </h1>
+        <p class="text-slate-400 text-sm mt-2">
+            Analisis cepat kesesuaian varietas padi berbasis kondisi lahan
+        </p>
+    </div>
+
+    <!-- INPUT CARD -->
+    <div class="glass-card p-6 rounded-2xl mb-6 border border-white/10">
+
+        <p class="text-xs text-green-400 font-bold uppercase mb-4 tracking-widest">
+            📥 Input Kondisi Lahan
+        </p>
+
+        <input id="input-umur" type="number"
+            placeholder="Umur panen (hari)"
+            class="w-full p-3 mb-3 bg-slate-900 rounded-xl border border-white/5 focus:border-green-500 outline-none">
+
+        <select id="input-hujan"
+            class="w-full p-3 mb-4 bg-slate-900 rounded-xl border border-white/5 text-slate-300 focus:border-green-500 outline-none">
+            <option value="">-- Curah Hujan --</option>
+            <option value="rendah">Rendah</option>
+            <option value="sedang">Sedang</option>
+            <option value="normal">Normal</option>
+            <option value="tinggi">Tinggi</option>
+            <option value="sangat tinggi">Sangat Tinggi</option>
+        </select>
+
+        <button onclick="analisisLahan()"
+            class="w-full bg-gradient-to-r from-green-600 to-emerald-500 p-3 rounded-xl font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-green-900/40">
+            🚀 Analisis Sekarang
+        </button>
+
+    </div>
+
+    <!-- HASIL -->
+    <div id="hasil-analisis" class="mt-4 hidden">
+        <div class="glass-card p-5 rounded-2xl border border-green-500/20">
+
+            <p class="text-xs text-green-400 font-bold uppercase mb-4 tracking-widest">
+                🤖 Hasil Analisis AI
+            </p>
+
+            <div id="isi-analisis" class="space-y-3 text-sm"></div>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+const gasUrl = "https://script.google.com/macros/s/AKfycbyihpzJknrniK0KLvlFvNFI6N08uD_LWhx2jQrZqi3Tylhj2syCq1L6bKIzwc8YftAF/exec";
+
+// =======================
+// 📈 KLASIFIKASI UMUR
+// =======================
+function klasifikasiUmur(hari) {
+    if (hari <= 90) return "ultra genjah";
+    if (hari <= 105) return "sangat genjah";
+    if (hari <= 120) return "genjah";
+    if (hari <= 135) return "sedang";
+    return "panjang";
+}
+
+// =======================
+// 🌧️ ANALISIS LAHAN + AI
+// =======================
+async function analisisLahan() {
+
+    document.getElementById("hasil-analisis").classList.remove("hidden");
+    document.getElementById("isi-analisis").innerHTML = "🔄 Menganalisis kondisi lahan...";
+
+    const umur = parseInt(document.getElementById("input-umur").value);
+    const hujan = document.getElementById("input-hujan").value;
+
+    if (!umur || !hujan) {
+        alert("Isi semua data!");
+        return;
+    }
+
+    const kategori = klasifikasiUmur(umur);
+
+    const prompt = `
+Anda adalah PPL Indonesia.
+
+Data:
+- Umur: ${umur} hari (${kategori})
+- Curah hujan: ${hujan}
+
+WAJIB jawab JSON:
+{
+"rekomendasi": "sebutkan 2-3 varietas",
+"alasan": "penjelasan singkat",
+"tips": "tips praktis"
+}
+`;
+
+    try {
+        const res = await fetch(gasUrl, {
+            method: "POST",
+            body: JSON.stringify({ prompt })
+        });
+
+        const raw = await res.text();
+
+        const start = raw.indexOf("{");
+        const end = raw.lastIndexOf("}");
+
+        let output = "⚠️ Format AI tidak valid";
+
+        if (start !== -1 && end !== -1) {
+            const json = JSON.parse(raw.substring(start, end + 1));
+
+            output = `
+<div class="bg-green-500/5 p-3 rounded-xl border border-green-500/20">
+<b>🌾 Rekomendasi:</b><br>${json.rekomendasi}
+</div>
+
+<div class="bg-blue-500/5 p-3 rounded-xl border border-blue-500/20">
+<b>📊 Analisis:</b><br>${json.alasan}
+</div>
+
+<div class="bg-amber-500/5 p-3 rounded-xl border border-amber-500/20">
+<b>💡 Tips:</b><br>${json.tips}
+</div>
+`;
+        }
+
+        document.getElementById("isi-analisis").innerHTML = output;
+
+    } catch (err) {
+        console.error(err);
+        document.getElementById("isi-analisis").innerHTML = "❌ Gagal analisis AI";
+    }
+}
+</script>
